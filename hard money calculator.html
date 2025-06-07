@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Investment Property Funding Calculator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Calm Harmony Neutrals -->
+    <!-- Application Structure Plan: A single-view dashboard layout is used to create an intuitive calculator experience. The screen is split into two main sections: user inputs on the left and dynamic results on the right. This allows users to immediately see the output of their entries. A prominent, color-coded interpretation block provides instant qualitative feedback on the deal's viability, enhancing usability. This structure was chosen because it's the most direct and efficient way to present a functional tool, eliminating unnecessary clicks or navigation and prioritizing immediate feedback for the user. -->
+    <!-- Visualization & Content Choices: User data is captured via standard HTML number inputs for ease of use. Key calculations (Total Project Cost, Max Loan, Cash Needed, Estimated Fees, Total Interest Paid, Net Profit, ROI) are displayed in distinct, non-editable text blocks to clearly separate inputs from outputs. The most critical piece of feedback, the "Cash Needed" interpretation, is presented in a dynamically styled and colored text block (green for surplus, orange for deficit) to provide a quick, intuitive visual assessment of the result. The inclusion of LTV and LTC, along with points, estimated annual interest, total interest over the loan term, selling costs, net profit, and ROI, provides a highly realistic financial picture. All interactions are handled with vanilla JavaScript, confirming no SVG or Mermaid JS is used. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc; /* slate-50 */
+        }
+        .input-label {
+            color: #4b5563; /* gray-600 */
+        }
+        .input-field {
+            background-color: #ffffff;
+            border-color: #d1d5db; /* gray-300 */
+            color: #111827; /* gray-900 */
+        }
+        .input-field:focus {
+            outline: none;
+            border-color: #3b82f6; /* blue-500 */
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
+        }
+        .result-card {
+            background-color: #f9fafb; /* gray-50 */
+            border: 1px solid #e5e7eb; /* gray-200 */
+        }
+        .result-value {
+            color: #1e40af; /* blue-800 */
+        }
+        .interpretation-box {
+            transition: all 0.3s ease-in-out;
+        }
+    </style>
+</head>
+<body class="text-gray-800">
+
+    <div class="container mx-auto p-4 sm:p-6 md:p-8 max-w-6xl">
+
+        <header class="text-center mb-8">
+            <h1 class="text-3xl md:text-4xl font-bold text-white">Investment Property Funding Calculator</h1>
+            <p class="mt-2 text-lg text-gray-600">Instantly assess your deal and estimate the cash you'll need to close, including lender fees.</p>
+        </header>
+
+        <main class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6 border-b pb-3">Step 1: Project Details</h2>
+                <div class="space-y-6">
+                    <div>
+                        <label for="arv" class="block text-sm font-medium input-label mb-1">After-Repair Value (ARV)</label>
+                        <p class="text-xs text-gray-500 mb-2">The estimated market value of the property *after* renovations, used as estimated sale price.</p>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">$</span>
+                            <input type="number" id="arv" class="input-field w-full pl-7 pr-4 py-2.5 rounded-lg text-lg" placeholder="e.g., 450000" oninput="calculate()">
+                        </div>
+                    </div>
+                    <div>
+                        <label for="pp" class="block text-sm font-medium input-label mb-1">Purchase Price (PP)</label>
+                         <p class="text-xs text-gray-500 mb-2">The price you are paying to acquire the property.</p>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">$</span>
+                            <input type="number" id="pp" class="input-field w-full pl-7 pr-4 py-2.5 rounded-lg text-lg" placeholder="e.g., 210000" oninput="calculate()">
+                        </div>
+                    </div>
+                    <div>
+                        <label for="rb" class="block text-sm font-medium input-label mb-1">Rehab Budget (RB)</label>
+                         <p class="text-xs text-gray-500 mb-2">Your total estimated cost for all renovations.</p>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">$</span>
+                            <input type="number" id="rb" class="input-field w-full pl-7 pr-4 py-2.5 rounded-lg text-lg" placeholder="e.g., 40000" oninput="calculate()">
+                        </div>
+                    </div>
+                </div>
+
+                <h2 class="text-2xl font-bold text-gray-800 my-6 border-b pb-3">Step 2: Lender & Project Terms</h2>
+                 <div class="space-y-6">
+                    <div>
+                        <label for="ltv" class="block text-sm font-medium input-label mb-1">Lender's Max LTV (on ARV)</label>
+                        <p class="text-xs text-gray-500 mb-2">Max % of After-Repair Value (ARV) lender will loan. (Common: 70-75%)</p>
+                        <div class="relative">
+                            <input type="number" id="ltv" class="input-field w-full pr-7 pl-4 py-2.5 rounded-lg text-lg" value="70" placeholder="70" oninput="calculate()">
+                            <span class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500">%</span>
+                        </div>
+                    </div>
+                     <div>
+                        <label for="ltc" class="block text-sm font-medium input-label mb-1">Lender's Max LTC (on Total Project Cost)</label>
+                        <p class="text-xs text-gray-500 mb-2">Max % of Total Project Cost (PP + RB) lender will loan. (Common: 80-90%)</p>
+                        <div class="relative">
+                            <input type="number" id="ltc" class="input-field w-full pr-7 pl-4 py-2.5 rounded-lg text-lg" value="85" placeholder="85" oninput="calculate()">
+                            <span class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500">%</span>
+                        </div>
+                    </div>
+                    <div>
+                        <label for="interestRate" class="block text-sm font-medium input-label mb-1">Interest Rate (Annual)</label>
+                        <p class="text-xs text-gray-500 mb-2">The annual interest rate charged by the lender. (Common: 8-15%)</p>
+                        <div class="relative">
+                            <input type="number" id="interestRate" class="input-field w-full pr-7 pl-4 py-2.5 rounded-lg text-lg" value="12" placeholder="12" oninput="calculate()">
+                            <span class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500">%</span>
+                        </div>
+                    </div>
+                    <div>
+                        <label for="points" class="block text-sm font-medium input-label mb-1">Origination Points</label>
+                        <p class="text-xs text-gray-500 mb-2">Total origination points (1 point = 1% of loan amount, can include lender and broker fees). (Common: 1-5%)</p>
+                        <div class="relative">
+                            <input type="number" id="points" class="input-field w-full pr-7 pl-4 py-2.5 rounded-lg text-lg" value="2" placeholder="2" oninput="calculate()">
+                            <span class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500">%</span>
+                        </div>
+                    </div>
+                    <div>
+                        <label for="loanTermMonths" class="block text-sm font-medium input-label mb-1">Loan Term (Months)</label>
+                        <p class="text-xs text-gray-500 mb-2">The anticipated length of the hard money loan. (Common: 6-24 months)</p>
+                        <div class="relative">
+                            <input type="number" id="loanTermMonths" class="input-field w-full pr-4 pl-4 py-2.5 rounded-lg text-lg" value="12" placeholder="12" oninput="calculate()">
+                            <span class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500">months</span>
+                        </div>
+                    </div>
+                    <div>
+                        <label for="sellingCosts" class="block text-sm font-medium input-label mb-1">Estimated Selling Costs (% of ARV)</label>
+                        <p class="text-xs text-gray-500 mb-2">Realtor commissions, seller-paid closing costs, etc. (Common: 6-10%)</p>
+                        <div class="relative">
+                            <input type="number" id="sellingCosts" class="input-field w-full pr-7 pl-4 py-2.5 rounded-lg text-lg" value="8" placeholder="8" oninput="calculate()">
+                            <span class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500">%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="space-y-6">
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-6 border-b pb-3">Step 3: Your Funding Summary</h2>
+                    <div class="space-y-4">
+                        <div class="result-card p-4 rounded-lg flex justify-between items-center">
+                            <p class="font-medium text-gray-700">Total Project Cost (PP + RB)</p>
+                            <p id="tpc" class="text-xl font-semibold text-gray-900">$0.00</p>
+                        </div>
+                        <div class="result-card p-4 rounded-lg flex justify-between items-center">
+                            <p class="font-medium text-gray-700">Potential Loan based on ARV (LTV)</p>
+                            <p id="maxLoanLTV" class="text-xl font-semibold text-gray-900">$0.00</p>
+                        </div>
+                        <div class="result-card p-4 rounded-lg flex justify-between items-center">
+                            <p class="font-medium text-gray-700">Potential Loan based on Project Cost (LTC)</p>
+                            <p id="maxLoanLTC" class="text-xl font-semibold text-gray-900">$0.00</p>
+                        </div>
+                        <div class="result-card p-4 rounded-lg flex justify-between items-center border-t border-gray-300 pt-4">
+                            <p class="font-bold text-gray-800">Maximum Potential Loan</p>
+                            <p id="maxLoan" class="text-xl font-bold text-blue-800">$0.00</p>
+                        </div>
+                        <div class="result-card p-4 rounded-lg flex justify-between items-center">
+                            <p class="font-medium text-gray-700">Estimated Origination Points Paid</p>
+                            <p id="estimatedPoints" class="text-xl font-semibold text-gray-900">$0.00</p>
+                        </div>
+                        <div class="result-card p-4 rounded-lg flex justify-between items-center">
+                            <p class="font-medium text-gray-700">Estimated Monthly Interest Payment</p>
+                            <p id="monthlyInterest" class="text-xl font-semibold text-gray-900">$0.00</p>
+                        </div>
+                        <div class="result-card p-4 rounded-lg flex justify-between items-center">
+                            <p class="font-medium text-gray-700">Total Estimated Interest Paid</p>
+                            <p id="totalInterestPaid" class="text-xl font-semibold text-gray-900">$0.00</p>
+                        </div>
+                        <div class="result-card p-4 rounded-lg flex justify-between items-center">
+                            <p class="font-medium text-gray-700">Estimated Selling Costs</p>
+                            <p id="estimatedSellingCosts" class="text-xl font-semibold text-gray-900">$0.00</p>
+                        </div>
+                         <div class="result-card p-4 rounded-lg flex justify-between items-center border-t border-gray-300 pt-4">
+                            <p class="font-bold text-gray-800">Estimated Net Profit</p>
+                            <p id="netProfit" class="text-xl font-bold text-green-700">$0.00</p>
+                        </div>
+                        <div class="result-card p-4 rounded-lg flex justify-between items-center">
+                            <p class="font-bold text-gray-800">Estimated Project ROI</p>
+                            <p id="projectROI" class="text-xl font-bold text-green-700">0.00%</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="interpretation-box" class="interpretation-box p-6 rounded-2xl bg-blue-50 border border-blue-200">
+                    <h3 class="font-bold text-xl mb-2 text-blue-800">Your Estimated Cash to Close / Receive</h3>
+                    <p id="cashNeededText" class="text-blue-700">Enter your project details to see your estimated cash needed at closing.</p>
+                    <p id="cashNeeded" class="text-4xl font-bold mt-2 text-blue-900">$0.00</p>
+                </div>
+            </div>
+
+        </main>
+        
+        <footer class="mt-12 pt-6 border-t border-gray-200">
+             <h3 class="text-xl font-bold text-gray-800 mb-4">Important Considerations</h3>
+             <ul class="space-y-3 text-gray-600 list-disc list-inside">
+                <li><span class="font-semibold">Cash Needed (at closing):</span> This figure primarily represents the gap between your Total Project Cost and the Maximum Loan, *plus* the Estimated Origination Points Paid.</li>
+                <li><span class="font-semibold">Estimated Net Profit:</span> This is the projected profit after all acquisition, rehab, loan interest, and selling costs are accounted for.</li>
+                <li><span class="font-semibold">Estimated Project ROI:</span> This Return on Investment is calculated based on the net profit relative to the total costs involved in the project (Purchase Price + Rehab Budget + Points + Total Interest Paid + Selling Costs).</li>
+                <li><span class="font-semibold">Other Closing Costs:</span> Remember to budget separately for other standard closing costs (e.g., title fees, legal fees) not explicitly accounted for in this calculation (like those typically rolled into "other closing costs" on the DSCR calculator).</li>
+                <li><span class="font-semibold">Accuracy is Key:</span> The quality of this estimate depends entirely on the accuracy of your ARV, Rehab Budget, and cost percentages. Always perform thorough due diligence.</li>
+                <li><span class="font-semibold">Contingency Fund:</span> It's wise to have a separate contingency fund (10-15% of your rehab budget) for unexpected costs. Your business lines of credit could be perfect for this.</li>
+             </ul>
+        </footer>
+
+    </div>
+
+    <script>
+        function formatCurrency(value) {
+            if (isNaN(value) || !isFinite(value)) {
+                return '$0.00';
+            }
+            return value.toLocaleString('en-US', {
+                style: 'currency',
+                currency: 'USD',
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+            });
+        }
+
+        function formatPercentage(value) {
+            if (isNaN(value) || !isFinite(value)) {
+                return '0.00%';
+            }
+            return value.toFixed(2) + '%';
+        }
+
+        function calculate() {
+            const arv = parseFloat(document.getElementById('arv').value) || 0;
+            const pp = parseFloat(document.getElementById('pp').value) || 0;
+            const rb = parseFloat(document.getElementById('rb').value) || 0;
+            const ltv = parseFloat(document.getElementById('ltv').value) || 0;
+            const ltc = parseFloat(document.getElementById('ltc').value) || 0;
+            const interestRate = parseFloat(document.getElementById('interestRate').value) || 0;
+            const points = parseFloat(document.getElementById('points').value) || 0;
+            const loanTermMonths = parseFloat(document.getElementById('loanTermMonths').value) || 0;
+            const sellingCostsPercentage = parseFloat(document.getElementById('sellingCosts').value) || 0;
+
+
+            const tpc = pp + rb; // Total Project Cost (Purchase + Rehab)
+            const maxLoanByLTV = arv * (ltv / 100);
+            const maxLoanByLTC = tpc * (ltc / 100);
+            const finalMaxLoan = Math.min(maxLoanByLTV, maxLoanByLTC); // Lender will loan the lesser of the two
+
+            const estimatedPoints = finalMaxLoan * (points / 100);
+            const monthlyInterest = (finalMaxLoan * (interestRate / 100)) / 12;
+            const totalInterestPaid = monthlyInterest * loanTermMonths;
+
+            const estimatedSellingCostsAmount = arv * (sellingCostsPercentage / 100);
+
+            // Total overall costs for the project (acquisition, rehab, loan costs, selling costs)
+            const totalProjectInvestment = pp + rb + estimatedPoints + totalInterestPaid + estimatedSellingCostsAmount;
+            
+            // Estimated Net Profit
+            const netProfit = arv - totalProjectInvestment;
+
+            // Estimated Project ROI (Return on Investment)
+            // Calculated as Net Profit / Total Project Investment (if Total Project Investment > 0)
+            let projectROI = 0;
+            if (totalProjectInvestment > 0) {
+                projectROI = (netProfit / totalProjectInvestment) * 100;
+            }
+
+            // Cash needed at closing = (Total Project Cost - Loan Received) + Points
+            const cashNeeded = tpc - finalMaxLoan + estimatedPoints;
+
+            document.getElementById('tpc').innerText = formatCurrency(tpc);
+            document.getElementById('maxLoanLTV').innerText = formatCurrency(maxLoanByLTV);
+            document.getElementById('maxLoanLTC').innerText = formatCurrency(maxLoanByLTC);
+            document.getElementById('maxLoan').innerText = formatCurrency(finalMaxLoan);
+            document.getElementById('estimatedPoints').innerText = formatCurrency(estimatedPoints);
+            document.getElementById('monthlyInterest').innerText = formatCurrency(monthlyInterest);
+            document.getElementById('totalInterestPaid').innerText = formatCurrency(totalInterestPaid);
+            document.getElementById('estimatedSellingCosts').innerText = formatCurrency(estimatedSellingCostsAmount);
+            document.getElementById('netProfit').innerText = formatCurrency(netProfit);
+            document.getElementById('projectROI').innerText = formatPercentage(projectROI);
+            document.getElementById('cashNeeded').innerText = formatCurrency(Math.abs(cashNeeded)); // Display as absolute value
+
+            const interpretationBox = document.getElementById('interpretation-box');
+            const cashNeededText = document.getElementById('cashNeededText');
+            const cashNeededEl = document.getElementById('cashNeeded');
+
+            interpretationBox.classList.remove('bg-green-50', 'border-green-200', 'bg-red-50', 'border-red-200', 'bg-blue-50', 'border-blue-200');
+            cashNeededText.classList.remove('text-green-800', 'text-red-800', 'text-blue-800');
+            cashNeededEl.classList.remove('text-green-900', 'text-red-900', 'text-blue-900');
+
+            if (arv === 0 && pp === 0 && rb === 0) {
+                 interpretationBox.classList.add('bg-blue-50', 'border-blue-200');
+                 cashNeededText.textContent = 'Your Estimated Result';
+                 cashNeededText.classList.add('text-blue-800');
+                 cashNeededEl.classList.add('text-blue-900');
+            } else if (cashNeeded <= 0) {
+                interpretationBox.classList.add('bg-green-50', 'border-green-200');
+                cashNeededText.textContent = 'Excellent! You may have extra cash back at closing:';
+                cashNeededText.classList.add('text-green-800');
+                cashNeededEl.classList.add('text-green-900');
+            } else {
+                interpretationBox.classList.add('bg-red-50', 'border-red-200');
+                cashNeededText.textContent = 'Your estimated cash needed at closing:';
+                cashNeededText.classList.add('text-red-800');
+                cashNeededEl.classList.add('text-red-900');
+            }
+
+            // Adjust text color for net profit and ROI based on positive/negative
+            const netProfitEl = document.getElementById('netProfit');
+            const projectROIEl = document.getElementById('projectROI');
+            if (netProfit < 0) {
+                netProfitEl.classList.remove('text-green-700');
+                netProfitEl.classList.add('text-red-700');
+                projectROIEl.classList.remove('text-green-700');
+                projectROIEl.classList.add('text-red-700');
+            } else {
+                netProfitEl.classList.remove('text-red-700');
+                netProfitEl.classList.add('text-green-700');
+                projectROIEl.classList.remove('text-red-700');
+                projectROIEl.classList.add('text-green-700');
+            }
+        }
+
+        window.onload = calculate; // Calculate on page load with default values
+    </script>
+
+</body>
+</html>

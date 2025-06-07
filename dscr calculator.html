@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DSCR & Cash-Out Refinance Calculator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Calm Harmony Neutrals -->
+    <!-- Application Structure Plan: This single-page application is structured as a two-column dashboard, providing a clear input-to-output flow. The left column contains all user-configurable inputs for property details, income, and various loan terms. The right column immediately displays the calculated results in a summary format, allowing for real-time assessment. Key performance indicators like NOI, DSCR, Max Loan amounts, Cash Out, and Cash to Close are prominently featured. This design prioritizes direct interaction and immediate feedback, making complex calculations easy to understand at a glance, and supports rapid "what-if" analysis for refinance scenarios. -->
+    <!-- Visualization & Content Choices: Numeric inputs are used for all financial and percentage values. Calculated results are presented in non-editable text fields for clarity. The "Estimated Cash to Close" result is dynamically styled with color (green for net cash, red for out-of-pocket, blue for initial state) to provide intuitive visual feedback on the financial impact. All calculations and UI updates are driven by vanilla JavaScript, ensuring responsiveness and direct interaction. No charts, SVG, or Mermaid JS are utilized; the focus is on clear numerical presentation. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc; /* slate-50 */
+        }
+        .input-label {
+            color: #4b5563; /* gray-600 */
+        }
+        .input-field {
+            background-color: #ffffff;
+            border-color: #d1d5db; /* gray-300 */
+            color: #111827; /* gray-900 */
+        }
+        .input-field:focus {
+            outline: none;
+            border-color: #3b82f6; /* blue-500 */
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
+        }
+        .result-card {
+            background-color: #f9fafb; /* gray-50 */
+            border: 1px solid #e5e7eb; /* gray-200 */
+        }
+        .result-value {
+            color: #1e40af; /* blue-800 */
+        }
+        .interpretation-box {
+            transition: all 0.3s ease-in-out;
+        }
+    </style>
+</head>
+<body class="text-gray-800">
+
+    <div class="container mx-auto p-4 sm:p-6 md:p-8 max-w-6xl">
+
+        <header class="text-center mb-8">
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-900">DSCR & Cash-Out Refinance Calculator</h1>
+            <p class="mt-2 text-lg text-gray-600">Analyze potential DSCR loan scenarios, cash-out amounts, and estimated closing costs for your investment property.</p>
+        </header>
+
+        <main class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6 border-b pb-3">Step 1: Property & Income Details</h2>
+                <div class="space-y-6">
+                    <div>
+                        <label for="grossAnnualRent" class="block text-sm font-medium input-label mb-1">Gross Annual Rent</label>
+                        <p class="text-xs text-gray-500 mb-2">Total annual rental income from the property.</p>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">$</span>
+                            <input type="number" id="grossAnnualRent" class="input-field w-full pl-7 pr-4 py-2.5 rounded-lg text-lg" placeholder="e.g., 36000" oninput="calculate()">
+                        </div>
+                    </div>
+                    <div>
+                        <label for="annualOperatingExpenses" class="block text-sm font-medium input-label mb-1">Annual Operating Expenses (excluding mortgage)</label>
+                         <p class="text-xs text-gray-500 mb-2">Property taxes, insurance, maintenance, vacancy, management fees, etc.</p>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">$</span>
+                            <input type="number" id="annualOperatingExpenses" class="input-field w-full pl-7 pr-4 py-2.5 rounded-lg text-lg" placeholder="e.g., 9000" oninput="calculate()">
+                        </div>
+                    </div>
+                    <div>
+                        <label for="currentPropertyValue" class="block text-sm font-medium input-label mb-1">Current Property Value</label>
+                         <p class="text-xs text-gray-500 mb-2">Estimated market value of the property "as-is".</p>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">$</span>
+                            <input type="number" id="currentPropertyValue" class="input-field w-full pl-7 pr-4 py-2.5 rounded-lg text-lg" placeholder="e.g., 350000" oninput="calculate()">
+                        </div>
+                    </div>
+                    <div>
+                        <label for="existingLoanBalance" class="block text-sm font-medium input-label mb-1">Existing Mortgage Balance</label>
+                         <p class="text-xs text-gray-500 mb-2">The current outstanding balance on your existing loan.</p>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">$</span>
+                            <input type="number" id="existingLoanBalance" class="input-field w-full pl-7 pr-4 py-2.5 rounded-lg text-lg" placeholder="e.g., 150000" oninput="calculate()">
+                        </div>
+                    </div>
+                </div>
+
+                <h2 class="text-2xl font-bold text-gray-800 my-6 border-b pb-3">Step 2: Lender & Loan Details</h2>
+                 <div class="space-y-6">
+                    <div>
+                        <label for="newLoanInterestRate" class="block text-sm font-medium input-label mb-1">New Loan Interest Rate (Annual)</label>
+                        <p class="text-xs text-gray-500 mb-2">The anticipated annual interest rate for the new DSCR loan. (Common: 8-10%)</p>
+                        <div class="relative">
+                            <input type="number" id="newLoanInterestRate" class="input-field w-full pr-7 pl-4 py-2.5 rounded-lg text-lg" value="9" placeholder="9" oninput="calculate()">
+                            <span class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500">%</span>
+                        </div>
+                    </div>
+                     <div>
+                        <label for="newLoanTermYears" class="block text-sm font-medium input-label mb-1">New Loan Term (Years)</label>
+                        <p class="text-xs text-gray-500 mb-2">The amortization period for the new loan. (Common: 30 years)</p>
+                        <div class="relative">
+                            <input type="number" id="newLoanTermYears" class="input-field w-full pr-4 pl-4 py-2.5 rounded-lg text-lg" value="30" placeholder="30" oninput="calculate()">
+                            <span class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500">years</span>
+                        </div>
+                    </div>
+                    <div>
+                        <label for="lenderMinDSCR" class="block text-sm font-medium input-label mb-1">Lender's Minimum DSCR</label>
+                        <p class="text-xs text-gray-500 mb-2">The minimum Debt Service Coverage Ratio required by the lender. (Common: 1.20-1.25)</p>
+                        <div class="relative">
+                            <input type="number" id="lenderMinDSCR" class="input-field w-full pr-4 pl-4 py-2.5 rounded-lg text-lg" value="1.25" step="0.01" placeholder="1.25" oninput="calculate()">
+                        </div>
+                    </div>
+                    <div>
+                        <label for="lenderMaxLTV" class="block text-sm font-medium input-label mb-1">Lender's Max LTV (on Current Value)</label>
+                        <p class="text-xs text-gray-500 mb-2">Maximum percentage of the property's current value the lender will loan. (Common: 70-80%)</p>
+                        <div class="relative">
+                            <input type="number" id="lenderMaxLTV" class="input-field w-full pr-7 pl-4 py-2.5 rounded-lg text-lg" value="75" placeholder="75" oninput="calculate()">
+                            <span class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500">%</span>
+                        </div>
+                    </div>
+                     <div>
+                        <label for="pointsPercentage" class="block text-sm font-medium input-label mb-1">Origination Points (as % of new loan)</label>
+                        <p class="text-xs text-gray-500 mb-2">Total origination points (1 point = 1% of new loan amount).</p>
+                        <div class="relative">
+                            <input type="number" id="pointsPercentage" class="input-field w-full pr-7 pl-4 py-2.5 rounded-lg text-lg" value="2" placeholder="2" oninput="calculate()">
+                            <span class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500">%</span>
+                        </div>
+                    </div>
+                    <div>
+                        <label for="otherClosingCostsPercentage" class="block text-sm font-medium input-label mb-1">Other Closing Costs (as % of new loan)</label>
+                        <p class="text-xs text-gray-500 mb-2">Includes appraisal, title, legal, lender fees, etc.</p>
+                        <div class="relative">
+                            <input type="number" id="otherClosingCostsPercentage" class="input-field w-full pr-7 pl-4 py-2.5 rounded-lg text-lg" value="1" placeholder="1" oninput="calculate()">
+                            <span class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500">%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="space-y-6">
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-6 border-b pb-3">Step 3: Loan & Refinance Results</h2>
+                    <div class="space-y-4">
+                        <div class="result-card p-4 rounded-lg flex justify-between items-center">
+                            <p class="font-medium text-gray-700">Net Operating Income (NOI)</p>
+                            <p id="noi" class="text-xl font-semibold text-gray-900">$0.00</p>
+                        </div>
+                        <div class="result-card p-4 rounded-lg flex justify-between items-center">
+                            <p class="font-medium text-gray-700">Max Loan (Based on LTV)</p>
+                            <p id="maxLoanLTV" class="text-xl font-semibold text-gray-900">$0.00</p>
+                        </div>
+                        <div class="result-card p-4 rounded-lg flex justify-between items-center">
+                            <p class="font-medium text-gray-700">Max Loan (Based on DSCR)</p>
+                            <p id="maxLoanDSCR" class="text-xl font-semibold text-gray-900">$0.00</p>
+                        </div>
+                         <div class="result-card p-4 rounded-lg flex justify-between items-center border-t border-gray-300 pt-4">
+                            <p class="font-bold text-gray-800">Final Maximum New Loan</p>
+                            <p id="finalMaxLoan" class="text-xl font-bold text-blue-800">$0.00</p>
+                        </div>
+                        <div class="result-card p-4 rounded-lg flex justify-between items-center">
+                            <p class="font-medium text-gray-700">Estimated Monthly P&I Payment</p>
+                            <p id="monthlyPayment" class="text-xl font-semibold text-gray-900">$0.00</p>
+                        </div>
+                         <div class="result-card p-4 rounded-lg flex justify-between items-center">
+                            <p class="font-medium text-gray-700">Calculated DSCR for New Loan</p>
+                            <p id="calculatedDSCR" class="text-xl font-semibold text-gray-900">0.00</p>
+                        </div>
+                        <div class="result-card p-4 rounded-lg flex justify-between items-center">
+                            <p class="font-medium text-gray-700">Estimated Cash Out</p>
+                            <p id="cashOut" class="text-xl font-semibold text-gray-900">$0.00</p>
+                        </div>
+                         <div class="result-card p-4 rounded-lg flex justify-between items-center">
+                            <p class="font-medium text-gray-700">Estimated Total Fees (Points + Other Costs)</p>
+                            <p id="totalFees" class="text-xl font-semibold text-gray-900">$0.00</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="interpretation-box" class="interpretation-box p-6 rounded-2xl bg-blue-50 border border-blue-200">
+                    <h3 class="font-bold text-xl mb-2 text-blue-800">Your Estimated Cash to Close / Receive</h3>
+                    <p id="cashToCloseText" class="text-blue-700">Enter your details to see your estimated cash flow at closing.</p>
+                    <p id="cashToClose" class="text-4xl font-bold mt-2 text-blue-900">$0.00</p>
+                </div>
+            </div>
+
+        </main>
+        
+        <footer class="mt-12 pt-6 border-t border-gray-200">
+             <h3 class="text-xl font-bold text-gray-800 mb-4">Important Considerations</h3>
+             <ul class="space-y-3 text-gray-600 list-disc list-inside">
+                <li><span class="font-semibold">DSCR (Debt Service Coverage Ratio):</span> This ratio indicates the property's ability to cover its mortgage payments from its net operating income. Lenders typically require a DSCR of 1.20 or higher for investment properties.</li>
+                <li><span class="font-semibold">Maximum New Loan:</span> The actual loan amount will be the *lower* of what the property qualifies for based on its Loan-to-Value (LTV) and its Debt Service Coverage Ratio (DSCR).</li>
+                <li><span class="font-semibold">Cash Out:</span> This is the amount of money you would receive at closing *after* your existing mortgage is paid off by the new loan.</li>
+                <li><span class="font-semibold">Estimated Cash to Close / Receive:</span> This indicates the net cash flow at closing, taking into account any cash-out funds and the total fees. A negative value means you'd bring cash, a positive means you'd receive cash.</li>
+                <li><span class="font-semibold">Accuracy is Key:</span> The quality of this estimate depends entirely on the accuracy of your input data. Always verify figures with actual property records, lender quotes, and professional appraisals.</li>
+                <li><span class="font-semibold">Other Costs:</span> This calculator provides an estimate of core loan fees. Be aware of additional costs like title insurance, escrow fees, legal fees, etc., which can vary by state and transaction.</li>
+             </ul>
+        </footer>
+
+    </div>
+
+    <script>
+        function formatCurrency(value) {
+            if (isNaN(value) || !isFinite(value)) {
+                return '$0.00';
+            }
+            return value.toLocaleString('en-US', {
+                style: 'currency',
+                currency: 'USD',
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+            });
+        }
+
+        // Function to calculate monthly P&I payment
+        function calculateMonthlyPayment(principal, annualRate, termYears) {
+            const monthlyRate = (annualRate / 100) / 12;
+            const numberOfPayments = termYears * 12;
+
+            if (monthlyRate === 0) { // Handle 0% interest rate case
+                return principal / numberOfPayments;
+            }
+
+            const numerator = principal * (monthlyRate * Math.pow(1 + monthlyRate, numberOfPayments));
+            const denominator = Math.pow(1 + monthlyRate, numberOfPayments) - 1;
+            return numerator / denominator;
+        }
+
+        // Function to calculate principal given monthly payment, rate, and term
+        function calculatePrincipalFromMonthlyPayment(monthlyPayment, annualRate, termYears) {
+            const monthlyRate = (annualRate / 100) / 12;
+            const numberOfPayments = termYears * 12;
+
+            if (monthlyRate === 0) { // Handle 0% interest rate case
+                return monthlyPayment * numberOfPayments;
+            }
+
+            const numerator = monthlyPayment * (Math.pow(1 + monthlyRate, numberOfPayments) - 1);
+            const denominator = monthlyRate * Math.pow(1 + monthlyRate, numberOfPayments);
+            return numerator / denominator;
+        }
+
+
+        function calculate() {
+            const grossAnnualRent = parseFloat(document.getElementById('grossAnnualRent').value) || 0;
+            const annualOperatingExpenses = parseFloat(document.getElementById('annualOperatingExpenses').value) || 0;
+            const currentPropertyValue = parseFloat(document.getElementById('currentPropertyValue').value) || 0;
+            const existingLoanBalance = parseFloat(document.getElementById('existingLoanBalance').value) || 0;
+            const newLoanInterestRate = parseFloat(document.getElementById('newLoanInterestRate').value) || 0;
+            const newLoanTermYears = parseFloat(document.getElementById('newLoanTermYears').value) || 0;
+            const lenderMinDSCR = parseFloat(document.getElementById('lenderMinDSCR').value) || 0;
+            const lenderMaxLTV = parseFloat(document.getElementById('lenderMaxLTV').value) || 0;
+            const pointsPercentage = parseFloat(document.getElementById('pointsPercentage').value) || 0;
+            const otherClosingCostsPercentage = parseFloat(document.getElementById('otherClosingCostsPercentage').value) || 0;
+
+
+            // Calculate NOI
+            const noi = grossAnnualRent - annualOperatingExpenses;
+            document.getElementById('noi').innerText = formatCurrency(noi);
+
+            // Calculate Max Loan based on LTV
+            const maxLoanLTV = currentPropertyValue * (lenderMaxLTV / 100);
+            document.getElementById('maxLoanLTV').innerText = formatCurrency(maxLoanLTV);
+
+            // Calculate Max Loan based on DSCR
+            let maxLoanDSCR = 0;
+            if (lenderMinDSCR > 0 && newLoanTermYears > 0 && newLoanInterestRate >= 0) {
+                const maxAnnualDebtService = noi / lenderMinDSCR;
+                const maxMonthlyDebtService = maxAnnualDebtService / 12;
+
+                maxLoanDSCR = calculatePrincipalFromMonthlyPayment(maxMonthlyDebtService, newLoanInterestRate, newLoanTermYears);
+            }
+            document.getElementById('maxLoanDSCR').innerText = formatCurrency(maxLoanDSCR);
+
+
+            // Determine the final maximum new loan (lesser of LTV or DSCR limits)
+            let finalMaxLoan = Math.min(maxLoanLTV, maxLoanDSCR);
+            if (finalMaxLoan === 0 && (maxLoanLTV > 0 || maxLoanDSCR > 0)) { // Handle cases where one limit is zero but the other isn't due to missing input
+                finalMaxLoan = Math.max(maxLoanLTV, maxLoanDSCR);
+            }
+             if (finalMaxLoan <= 0 && (noi > 0 || currentPropertyValue > 0)) { // If values entered, but no loan, show 0
+                 finalMaxLoan = 0;
+             } else if (noi <= 0 || currentPropertyValue <=0) { // If no income or value, loan should be 0
+                 finalMaxLoan = 0;
+             }
+
+            document.getElementById('finalMaxLoan').innerText = formatCurrency(finalMaxLoan);
+
+            // Calculate Estimated Monthly P&I Payment for the finalMaxLoan
+            const monthlyPayment = calculateMonthlyPayment(finalMaxLoan, newLoanInterestRate, newLoanTermYears);
+            document.getElementById('monthlyPayment').innerText = formatCurrency(monthlyPayment);
+
+            // Calculate Calculated DSCR for New Loan
+            let calculatedDSCR = 0;
+            const annualDebtServiceForCalculatedLoan = monthlyPayment * 12;
+            if (annualDebtServiceForCalculatedLoan > 0) {
+                calculatedDSCR = noi / annualDebtServiceForCalculatedLoan;
+            }
+            document.getElementById('calculatedDSCR').innerText = calculatedDSCR.toFixed(2);
+
+            // Calculate Estimated Cash Out
+            const cashOut = finalMaxLoan - existingLoanBalance;
+            document.getElementById('cashOut').innerText = formatCurrency(cashOut);
+
+            // Calculate Estimated Total Fees
+            const totalFees = (finalMaxLoan * (pointsPercentage / 100)) + (finalMaxLoan * (otherClosingCostsPercentage / 100));
+            document.getElementById('totalFees').innerText = formatCurrency(totalFees);
+
+            // Calculate Estimated Cash to Close / Receive
+            // This is the net cash flow at closing: cash out MINUS fees
+            const cashToCloseReceive = cashOut - totalFees;
+            document.getElementById('cashToClose').innerText = formatCurrency(Math.abs(cashToCloseReceive));
+            
+            const interpretationBox = document.getElementById('interpretation-box');
+            const cashToCloseText = document.getElementById('cashToCloseText');
+            const cashToCloseEl = document.getElementById('cashToClose');
+
+            interpretationBox.classList.remove('bg-green-50', 'border-green-200', 'bg-red-50', 'border-red-200', 'bg-blue-50', 'border-blue-200');
+            cashToCloseText.classList.remove('text-green-800', 'text-red-800', 'text-blue-800');
+            cashToCloseEl.classList.remove('text-green-900', 'text-red-900', 'text-blue-900');
+
+            if (grossAnnualRent === 0 && annualOperatingExpenses === 0 && currentPropertyValue === 0) {
+                 interpretationBox.classList.add('bg-blue-50', 'border-blue-200');
+                 cashToCloseText.textContent = 'Enter your details to see your estimated cash flow at closing.';
+                 cashToCloseText.classList.add('text-blue-800');
+                 cashToCloseEl.classList.add('text-blue-900');
+            } else if (cashToCloseReceive >= 0) {
+                interpretationBox.classList.add('bg-green-50', 'border-green-200');
+                cashToCloseText.textContent = 'Estimated Net Cash Received at Closing:';
+                cashToCloseText.classList.add('text-green-800');
+                cashToCloseEl.classList.add('text-green-900');
+            } else {
+                interpretationBox.classList.add('bg-red-50', 'border-red-200');
+                cashToCloseText.textContent = 'Estimated Cash Needed at Closing:';
+                cashToCloseText.classList.add('text-red-800');
+                cashToCloseEl.classList.add('text-red-900');
+            }
+        }
+
+        window.onload = calculate;
+    </script>
+
+</body>
+</html>
