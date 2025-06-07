@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New Construction Ground-Up Calculator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Calm Harmony Neutrals -->
+    <!-- Application Structure Plan: This single-page application is designed with a clear, two-column layout resembling a dashboard. The left column houses all inputs for land, construction, income, and loan terms, organized into logical sections. The right column displays the calculated financial outcomes, including total project costs, loan details, profitability metrics (net profit, ROI), and the crucial cash-to-close figure. This architecture provides immediate feedback as users adjust inputs, facilitating efficient scenario analysis for ground-up construction projects. The design prioritizes ease of use and clarity, allowing users to explore complex financial relationships interactively. -->
+    <!-- Visualization & Content Choices: All data inputs are handled via standard HTML number fields for precise entry. Outputs are presented as non-editable text fields, clearly distinguishing between user-provided data and calculated results. Key financial indicators like Net Profit, Project ROI, and Cash to Close are visually emphasized with dynamic text coloring (green for positive, red for negative, blue for initial state) to provide intuitive performance indicators. The use of currency and percentage formatting enhances readability. All interactivity and calculations are powered by vanilla JavaScript, ensuring high performance and direct manipulation of the DOM, adhering strictly to the no SVG/Mermaid JS constraint. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc; /* slate-50 */
+        }
+        .input-label {
+            color: #4b5563; /* gray-600 */
+        }
+        .input-field {
+            background-color: #ffffff;
+            border-color: #d1d5db; /* gray-300 */
+            color: #111827; /* gray-900 */
+        }
+        .input-field:focus {
+            outline: none;
+            border-color: #3b82f6; /* blue-500 */
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
+        }
+        .result-card {
+            background-color: #f9fafb; /* gray-50 */
+            border: 1px solid #e5e7eb; /* gray-200 */
+        }
+        .result-value {
+            color: #1e40af; /* blue-800 */
+        }
+        .interpretation-box {
+            transition: all 0.3s ease-in-out;
+        }
+    </style>
+</head>
+<body class="text-gray-800">
+
+    <div class="container mx-auto p-4 sm:p-6 md:p-8 max-w-6xl">
+
+        <header class="text-center mb-8">
+            <h1 class="text-3xl md:text-4xl font-bold text-white">New Construction Ground-Up Calculator</h1>
+            <p class="mt-2 text-lg text-gray-600">Estimate funding, profitability, and cash flow for your ground-up real estate projects.</p>
+        </header>
+
+        <main class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6 border-b pb-3">Step 1: Project & Land Details</h2>
+                <div class="space-y-6">
+                    <div>
+                        <label for="landPrice" class="block text-sm font-medium input-label mb-1">Land Purchase Price</label>
+                        <p class="text-xs text-gray-500 mb-2">Cost to acquire the vacant land.</p>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">$</span>
+                            <input type="number" id="landPrice" class="input-field w-full pl-7 pr-4 py-2.5 rounded-lg text-lg" placeholder="e.g., 80000" oninput="calculate()">
+                        </div>
+                    </div>
+                    <div>
+                        <label for="buildingSizeSF" class="block text-sm font-medium input-label mb-1">Proposed Building Size (SF)</label>
+                         <p class="text-xs text-gray-500 mb-2">Total square footage of the new construction.</p>
+                        <div class="relative">
+                            <input type="number" id="buildingSizeSF" class="input-field w-full pl-4 pr-7 py-2.5 rounded-lg text-lg" placeholder="e.g., 2000" oninput="calculate()">
+                            <span class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500">SF</span>
+                        </div>
+                    </div>
+                    <div>
+                        <label for="costPerSF" class="block text-sm font-medium input-label mb-1">Construction Cost per SF</label>
+                         <p class="text-xs text-gray-500 mb-2">Estimated hard costs for construction per square foot.</p>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">$</span>
+                            <input type="number" id="costPerSF" class="input-field w-full pl-7 pr-4 py-2.5 rounded-lg text-lg" placeholder="e.g., 150" oninput="calculate()">
+                        </div>
+                    </div>
+                    <div>
+                        <label for="softCostsPercentage" class="block text-sm font-medium input-label mb-1">Soft Costs (% of Construction)</label>
+                        <p class="text-xs text-gray-500 mb-2">Architectural, engineering, permits, surveys, legal, etc.</p>
+                        <div class="relative">
+                            <input type="number" id="softCostsPercentage" class="input-field w-full pr-7 pl-4 py-2.5 rounded-lg text-lg" value="15" placeholder="15" oninput="calculate()">
+                            <span class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500">%</span>
+                        </div>
+                    </div>
+                    <div>
+                        <label for="stabilizedValue" class="block text-sm font-medium input-label mb-1">Estimated Stabilized Value (ARV)</label>
+                        <p class="text-xs text-gray-500 mb-2">Estimated market value of the completed property, used as estimated sale price if flipping.</p>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">$</span>
+                            <input type="number" id="stabilizedValue" class="input-field w-full pl-7 pr-4 py-2.5 rounded-lg text-lg" placeholder="e.g., 500000" oninput="calculate()">
+                        </div>
+                    </div>
+                </div>
+
+                <h2 class="text-2xl font-bold text-gray-800 my-6 border-b pb-3">Step 2: Income & Loan Details</h2>
+                 <div class="space-y-6">
+                    <div>
+                        <label for="grossAnnualRentNew" class="block text-sm font-medium input-label mb-1">Estimated Gross Annual Rent (Stabilized)</label>
+                        <p class="text-xs text-gray-500 mb-2">If holding, projected annual rental income after completion.</p>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">$</span>
+                            <input type="number" id="grossAnnualRentNew" class="input-field w-full pl-7 pr-4 py-2.5 rounded-lg text-lg" placeholder="e.g., 40000" oninput="calculate()">
+                        </div>
+                    </div>
+                     <div>
+                        <label for="annualOperatingExpensesNew" class="block text-sm font-medium input-label mb-1">Estimated Annual Operating Expenses (Stabilized)</label>
+                        <p class="text-xs text-gray-500 mb-2">Taxes, insurance, maintenance, management, etc., for completed property.</p>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">$</span>
+                            <input type="number" id="annualOperatingExpensesNew" class="input-field w-full pl-7 pr-4 py-2.5 rounded-lg text-lg" placeholder="e.g., 10000" oninput="calculate()">
+                        </div>
+                    </div>
+                    <div>
+                        <label for="loanLTV" class="block text-sm font-medium input-label mb-1">Construction Loan Max LTV (on Stabilized Value)</label>
+                        <p class="text-xs text-gray-500 mb-2">Max % of Stabilized Value lender will loan. (Common: 65-75%)</p>
+                        <div class="relative">
+                            <input type="number" id="loanLTV" class="input-field w-full pr-7 pl-4 py-2.5 rounded-lg text-lg" value="70" placeholder="70" oninput="calculate()">
+                            <span class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500">%</span>
+                        </div>
+                    </div>
+                     <div>
+                        <label for="loanLTC" class="block text-sm font-medium input-label mb-1">Construction Loan Max LTC (on Total Project Cost)</label>
+                        <p class="text-xs text-gray-500 mb-2">Max % of Total Project Cost lender will loan. (Common: 75-85%)</p>
+                        <div class="relative">
+                            <input type="number" id="loanLTC" class="input-field w-full pr-7 pl-4 py-2.5 rounded-lg text-lg" value="80" placeholder="80" oninput="calculate()">
+                            <span class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500">%</span>
+                        </div>
+                    </div>
+                    <div>
+                        <label for="loanInterestRate" class="block text-sm font-medium input-label mb-1">Construction Loan Interest Rate (Annual)</label>
+                        <p class="text-xs text-gray-500 mb-2">The annual interest rate charged during construction. (Common: 9-14%)</p>
+                        <div class="relative">
+                            <input type="number" id="loanInterestRate" class="input-field w-full pr-7 pl-4 py-2.5 rounded-lg text-lg" value="10" placeholder="10" oninput="calculate()">
+                            <span class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500">%</span>
+                        </div>
+                    </div>
+                    <div>
+                        <label for="loanPoints" class="block text-sm font-medium input-label mb-1">Origination Points</label>
+                        <p class="text-xs text-gray-500 mb-2">Total origination points (1 point = 1% of loan amount). (Common: 1-4%)</p>
+                        <div class="relative">
+                            <input type="number" id="loanPoints" class="input-field w-full pr-7 pl-4 py-2.5 rounded-lg text-lg" value="2" placeholder="2" oninput="calculate()">
+                            <span class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500">%</span>
+                        </div>
+                    </div>
+                    <div>
+                        <label for="constructionLoanTermMonths" class="block text-sm font-medium input-label mb-1">Construction Loan Term (Months)</label>
+                        <p class="text-xs text-gray-500 mb-2">Anticipated length of the construction loan. (Common: 9-18 months)</p>
+                        <div class="relative">
+                            <input type="number" id="constructionLoanTermMonths" class="input-field w-full pr-4 pl-4 py-2.5 rounded-lg text-lg" value="12" placeholder="12" oninput="calculate()">
+                            <span class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500">months</span>
+                        </div>
+                    </div>
+                    <div>
+                        <label for="newSellingCosts" class="block text-sm font-medium input-label mb-1">Estimated Selling Costs (% of ARV)</label>
+                        <p class="text-xs text-gray-500 mb-2">Realtor commissions, seller-paid closing costs, etc. if selling the property.</p>
+                        <div class="relative">
+                            <input type="number" id="newSellingCosts" class="input-field w-full pr-7 pl-4 py-2.5 rounded-lg text-lg" value="6" placeholder="6" oninput="calculate()">
+                            <span class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500">%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="space-y-6">
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-6 border-b pb-3">Step 3: Financial Summary</h2>
+                    <div class="space-y-4">
+                        <div class="result-card p-4 rounded-lg flex justify-between items-center">
+                            <p class="font-medium text-gray-700">Total Construction Cost (Hard Costs)</p>
+                            <p id="totalConstructionCost" class="text-xl font-semibold text-gray-900">$0.00</p>
+                        </div>
+                        <div class="result-card p-4 rounded-lg flex justify-between items-center">
+                            <p class="font-medium text-gray-700">Total Soft Costs</p>
+                            <p id="totalSoftCosts" class="text-xl font-semibold text-gray-900">$0.00</p>
+                        </div>
+                        <div class="result-card p-4 rounded-lg flex justify-between items-center border-t border-gray-300 pt-4">
+                            <p class="font-bold text-gray-800">Total Project Cost (Land + Hard + Soft)</p>
+                            <p id="totalProjectCost" class="text-xl font-bold text-gray-900">$0.00</p>
+                        </div>
+                        <div class="result-card p-4 rounded-lg flex justify-between items-center mt-4">
+                            <p class="font-medium text-gray-700">Potential Loan (based on LTV)</p>
+                            <p id="potentialLoanLTV" class="text-xl font-semibold text-gray-900">$0.00</p>
+                        </div>
+                        <div class="result-card p-4 rounded-lg flex justify-between items-center">
+                            <p class="font-medium text-gray-700">Potential Loan (based on LTC)</p>
+                            <p id="potentialLoanLTC" class="text-xl font-semibold text-gray-900">$0.00</p>
+                        </div>
+                        <div class="result-card p-4 rounded-lg flex justify-between items-center border-t border-gray-300 pt-4">
+                            <p class="font-bold text-gray-800">Maximum Construction Loan</p>
+                            <p id="maxConstructionLoan" class="text-xl font-bold text-blue-800">$0.00</p>
+                        </div>
+                        <div class="result-card p-4 rounded-lg flex justify-between items-center">
+                            <p class="font-medium text-gray-700">Estimated Origination Points Paid</p>
+                            <p id="estimatedLoanPoints" class="text-xl font-semibold text-gray-900">$0.00</p>
+                        </div>
+                        <div class="result-card p-4 rounded-lg flex justify-between items-center">
+                            <p class="font-medium text-gray-700">Total Estimated Interest Paid (during construction)</p>
+                            <p id="totalConstructionInterest" class="text-xl font-semibold text-gray-900">$0.00</p>
+                        </div>
+                         <div class="result-card p-4 rounded-lg flex justify-between items-center border-t border-gray-300 pt-4">
+                            <p class="font-bold text-gray-800">Net Operating Income (NOI)</p>
+                            <p id="noiNew" class="text-xl font-bold text-gray-900">$0.00</p>
+                        </div>
+                        <div class="result-card p-4 rounded-lg flex justify-between items-center">
+                            <p class="font-bold text-gray-800">Capitalization Rate (Cap Rate)</p>
+                            <p id="capRate" class="text-xl font-bold text-gray-900">0.00%</p>
+                        </div>
+                        <div class="result-card p-4 rounded-lg flex justify-between items-center mt-4">
+                            <p class="font-medium text-gray-700">Estimated Selling Costs</p>
+                            <p id="totalSellingCosts" class="text-xl font-semibold text-gray-900">$0.00</p>
+                        </div>
+                         <div class="result-card p-4 rounded-lg flex justify-between items-center border-t border-gray-300 pt-4">
+                            <p class="font-bold text-gray-800">Estimated Net Profit</p>
+                            <p id="estimatedNetProfit" class="text-xl font-bold text-green-700">$0.00</p>
+                        </div>
+                        <div class="result-card p-4 rounded-lg flex justify-between items-center">
+                            <p class="font-bold text-gray-800">Estimated Project ROI</p>
+                            <p id="projectROI_New" class="text-xl font-bold text-green-700">0.00%</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="interpretation-box" class="interpretation-box p-6 rounded-2xl bg-blue-50 border border-blue-200">
+                    <h3 class="font-bold text-xl mb-2 text-blue-800">Your Estimated Cash to Close / Invest</h3>
+                    <p id="cashToCloseText" class="text-blue-700">Enter your project details to see your estimated cash needed at closing.</p>
+                    <p id="cashToClose" class="text-4xl font-bold mt-2 text-blue-900">$0.00</p>
+                </div>
+            </div>
+
+        </main>
+        
+        <footer class="mt-12 pt-6 border-t border-gray-200">
+             <h3 class="text-xl font-bold text-gray-800 mb-4">Important Considerations</h3>
+             <ul class="space-y-3 text-gray-600 list-disc list-inside">
+                <li><span class="font-semibold">Total Project Cost:</span> This encompasses the land purchase, all hard construction costs, and soft costs (permits, architectural, etc.).</li>
+                <li><span class="font-semibold">Cash to Close / Invest:</span> This represents the total equity you need to bring to the project, after accounting for the maximum construction loan.</li>
+                <li><span class="font-semibold">Cap Rate (Capitalization Rate):</span> Used for income-producing properties, it indicates the rate of return on the property based on its Net Operating Income (NOI) and stabilized value. Lower cap rates generally indicate higher property values relative to income.</li>
+                <li><span class="font-semibold">Estimated Net Profit:</span> This is the projected profit if you sell the completed property, after deducting all project costs (land, construction, soft costs, loan interest, points, and selling costs) from the Estimated Stabilized Value (ARV).</li>
+                <li><span class="font-semibold">Estimated Project ROI:</span> This Return on Investment measures the net profit against your total cash invested in the project.</li>
+                <li><span class="font-semibold">Contingency:</span> New construction projects often face unexpected costs. Always budget a contingency (e.g., 10-15% of construction costs) not included in the 'Rehab Budget' field here.</li>
+                <li><span class="font-semibold">Loan Interest During Construction:</span> Interest is typically paid on drawn amounts, not the full loan amount from day one. This calculator uses a simplified total interest calculation for the loan term.</li>
+                <li><span class="font-semibold">Permanent Financing:</span> This calculator focuses on the construction phase. If you plan to hold the property, you'll need to consider permanent financing after construction.</li>
+             </ul>
+        </footer>
+
+    </div>
+
+    <script>
+        function formatCurrency(value) {
+            if (isNaN(value) || !isFinite(value)) {
+                return '$0.00';
+            }
+            return value.toLocaleString('en-US', {
+                style: 'currency',
+                currency: 'USD',
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+            });
+        }
+
+        function formatPercentage(value) {
+            if (isNaN(value) || !isFinite(value)) {
+                return '0.00%';
+            }
+            return value.toFixed(2) + '%';
+        }
+
+        function calculate() {
+            // Project Details
+            const landPrice = parseFloat(document.getElementById('landPrice').value) || 0;
+            const buildingSizeSF = parseFloat(document.getElementById('buildingSizeSF').value) || 0;
+            const costPerSF = parseFloat(document.getElementById('costPerSF').value) || 0;
+            const softCostsPercentage = parseFloat(document.getElementById('softCostsPercentage').value) || 0;
+            const stabilizedValue = parseFloat(document.getElementById('stabilizedValue').value) || 0;
+
+            // Income & Loan Details
+            const grossAnnualRentNew = parseFloat(document.getElementById('grossAnnualRentNew').value) || 0;
+            const annualOperatingExpensesNew = parseFloat(document.getElementById('annualOperatingExpensesNew').value) || 0;
+            const loanLTV = parseFloat(document.getElementById('loanLTV').value) || 0;
+            const loanLTC = parseFloat(document.getElementById('loanLTC').value) || 0;
+            const loanInterestRate = parseFloat(document.getElementById('loanInterestRate').value) || 0;
+            const loanPoints = parseFloat(document.getElementById('loanPoints').value) || 0;
+            const constructionLoanTermMonths = parseFloat(document.getElementById('constructionLoanTermMonths').value) || 0;
+            const newSellingCostsPercentage = parseFloat(document.getElementById('newSellingCosts').value) || 0;
+
+            // --- Calculations ---
+
+            // 1. Total Construction Cost (Hard Costs)
+            const totalConstructionCost = buildingSizeSF * costPerSF;
+            document.getElementById('totalConstructionCost').innerText = formatCurrency(totalConstructionCost);
+
+            // 2. Total Soft Costs
+            const totalSoftCosts = totalConstructionCost * (softCostsPercentage / 100);
+            document.getElementById('totalSoftCosts').innerText = formatCurrency(totalSoftCosts);
+
+            // 3. Total Project Cost (Land + Hard + Soft Costs)
+            const totalProjectCost = landPrice + totalConstructionCost + totalSoftCosts;
+            document.getElementById('totalProjectCost').innerText = formatCurrency(totalProjectCost);
+
+            // 4. Max Loan based on LTV
+            const potentialLoanLTV = stabilizedValue * (loanLTV / 100);
+            document.getElementById('potentialLoanLTV').innerText = formatCurrency(potentialLoanLTV);
+
+            // 5. Max Loan based on LTC
+            const potentialLoanLTC = totalProjectCost * (loanLTC / 100);
+            document.getElementById('potentialLoanLTC').innerText = formatCurrency(potentialLoanLTC);
+
+            // 6. Final Maximum Construction Loan (Lesser of LTV or LTC limits)
+            const maxConstructionLoan = Math.min(potentialLoanLTV, potentialLoanLTC);
+            document.getElementById('maxConstructionLoan').innerText = formatCurrency(maxConstructionLoan);
+
+            // 7. Estimated Origination Points Paid
+            const estimatedLoanPoints = maxConstructionLoan * (loanPoints / 100);
+            document.getElementById('estimatedLoanPoints').innerText = formatCurrency(estimatedLoanPoints);
+
+            // 8. Total Estimated Interest Paid (during construction loan term)
+            // Assuming interest-only payments on the full loan amount for simplicity.
+            // In reality, interest is paid on drawn amounts, which ramp up.
+            const totalConstructionInterest = (maxConstructionLoan * (loanInterestRate / 100)) * (constructionLoanTermMonths / 12);
+            document.getElementById('totalConstructionInterest').innerText = formatCurrency(totalConstructionInterest);
+
+            // 9. Net Operating Income (NOI)
+            const noiNew = grossAnnualRentNew - annualOperatingExpensesNew;
+            document.getElementById('noiNew').innerText = formatCurrency(noiNew);
+
+            // 10. Capitalization Rate (Cap Rate)
+            let capRate = 0;
+            if (stabilizedValue > 0) {
+                capRate = (noiNew / stabilizedValue) * 100;
+            }
+            document.getElementById('capRate').innerText = formatPercentage(capRate);
+
+            // 11. Estimated Selling Costs (Amount)
+            const totalSellingCosts = stabilizedValue * (newSellingCostsPercentage / 100);
+            document.getElementById('totalSellingCosts').innerText = formatCurrency(totalSellingCosts);
+
+            // 12. Estimated Net Profit (if selling)
+            // Total Investment = Land + Construction + Soft Costs + Loan Points + Total Interest Paid + Selling Costs
+            const totalInvestmentForProfit = totalProjectCost + estimatedLoanPoints + totalConstructionInterest + totalSellingCosts;
+            const estimatedNetProfit = stabilizedValue - totalInvestmentForProfit;
+            document.getElementById('estimatedNetProfit').innerText = formatCurrency(estimatedNetProfit);
+
+            // 13. Estimated Project ROI (Return on Investment)
+            // Cash Invested = Total Project Cost - Max Construction Loan (this is the equity) + Estimated Loan Points
+            const cashInvestedForROI = totalProjectCost - maxConstructionLoan + estimatedLoanPoints;
+            let projectROI_New = 0;
+            if (cashInvestedForROI > 0) {
+                projectROI_New = (estimatedNetProfit / cashInvestedForROI) * 100;
+            } else if (estimatedNetProfit > 0) { // If cashInvestedForROI is zero or negative but there's a profit, ROI is theoretically infinite
+                projectROI_New = 999999; // Represent as a very high number or "Infinite"
+            }
+            document.getElementById('projectROI_New').innerText = formatPercentage(projectROI_New);
+
+
+            // 14. Estimated Cash to Close / Invest
+            // This is the total cash needed from the investor at the start of the project
+            // (Total Project Cost - Max Construction Loan) + Estimated Loan Points
+            const cashToCloseInvest = totalProjectCost - maxConstructionLoan + estimatedLoanPoints;
+            document.getElementById('cashToClose').innerText = formatCurrency(Math.abs(cashToCloseInvest));
+            
+            const interpretationBox = document.getElementById('interpretation-box');
+            const cashToCloseText = document.getElementById('cashToCloseText');
+            const cashToCloseEl = document.getElementById('cashToClose');
+
+            interpretationBox.classList.remove('bg-green-50', 'border-green-200', 'bg-red-50', 'border-red-200', 'bg-blue-50', 'border-blue-200');
+            cashToCloseText.classList.remove('text-green-800', 'text-red-800', 'text-blue-800');
+            cashToCloseEl.classList.remove('text-green-900', 'text-red-900', 'text-blue-900');
+
+            if (landPrice === 0 && buildingSizeSF === 0 && costPerSF === 0) {
+                 interpretationBox.classList.add('bg-blue-50', 'border-blue-200');
+                 cashToCloseText.textContent = 'Enter your project details to see your estimated cash needed at closing.';
+                 cashToCloseText.classList.add('text-blue-800');
+                 cashToCloseEl.classList.add('text-blue-900');
+            } else if (cashToCloseInvest <= 0) {
+                interpretationBox.classList.add('bg-green-50', 'border-green-200');
+                cashToCloseText.textContent = 'Excellent! Estimated Net Cash Received at Closing / Minimal Equity Needed:';
+                cashToCloseText.classList.add('text-green-800');
+                cashToCloseEl.classList.add('text-green-900');
+            } else {
+                interpretationBox.classList.add('bg-red-50', 'border-red-200');
+                cashToCloseText.textContent = 'Estimated Cash Needed at Closing / Required Equity:';
+                cashToCloseText.classList.add('text-red-800');
+                cashToCloseEl.classList.add('text-red-900');
+            }
+
+            // Adjust text color for net profit and ROI based on positive/negative
+            const estimatedNetProfitEl = document.getElementById('estimatedNetProfit');
+            const projectROI_NewEl = document.getElementById('projectROI_New');
+            if (estimatedNetProfit < 0) {
+                estimatedNetProfitEl.classList.remove('text-green-700');
+                estimatedNetProfitEl.classList.add('text-red-700');
+                projectROI_NewEl.classList.remove('text-green-700');
+                projectROI_NewEl.classList.add('text-red-700');
+            } else {
+                estimatedNetProfitEl.classList.remove('text-red-700');
+                estimatedNetProfitEl.classList.add('text-green-700');
+                projectROI_NewEl.classList.remove('text-red-700');
+                projectROI_NewEl.classList.add('text-green-700');
+            }
+        }
+
+        window.onload = calculate;
+    </script>
+
+</body>
+</html>
